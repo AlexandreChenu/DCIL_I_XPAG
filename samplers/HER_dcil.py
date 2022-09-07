@@ -62,6 +62,9 @@ class HER_DCIL(HER):
 			episode_idxs[her_indexes], future_t
 		]
 
+		dist_dg_future_ag = np.linalg.norm(transitions["observation.desired_goal"][her_indexes] - future_ag)
+		close_goal = np.where(dist_dg_future_ag <= 0.05, 1, 0)
+
 		transitions["observation.desired_goal"][her_indexes] = future_ag
 
 
@@ -69,7 +72,7 @@ class HER_DCIL(HER):
 
 
 		transitions["relabelling_mask"] = np.ones(transitions["reward"].shape)
-		transitions["relabelling_mask"][her_indexes] = 0
+		transitions["relabelling_mask"][her_indexes] = np.where(close_goal==1, 1, 0)
 
 		# recomputing rewards
 		if self.datatype == DataType.TORCH_CPU or self.datatype == DataType.TORCH_CUDA:
@@ -179,7 +182,7 @@ class HER_DCIL(HER):
 		# transitions["true_done"] = np.logical_and(transitions["reward"],transitions["last_skill"]))
 		transitions["true_done"] = np.logical_or(transitions["done_from_env"], transitions["reward"])
 
-		transitions["bonus_mask"] = np.logical_and(transitions["reward"], transitions["relabelling_mask"])
+		transitions["bonus_mask"] = np.logical_and(np.logical_and(transitions["reward"], transitions["relabelling_mask"]), np.logical_not(transitions["last_skill"]))
 
 		# print("shape true done = ", transitions["true_done"].shape)
 		# print("shape bonus mask = ", transitions["bonus_mask"].shape)
