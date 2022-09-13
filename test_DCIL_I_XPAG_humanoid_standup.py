@@ -33,7 +33,7 @@ from matplotlib import collections as mc
 import numpy as np
 import copy
 
-import gym_ghumanoid
+import gym_ghumanoid_standup
 
 ## DCIL versions
 from wrappers.gym_vec_env_mujoco import gym_vec_env
@@ -268,7 +268,7 @@ if (__name__=='__main__'):
 	env_args["demo_path"] = str(parsed_args.demo_path)
 
 	num_envs = 1  # the number of rollouts in parallel during training
-	env, eval_env, env_info = gym_vec_env('GHumanoidGoal-v0', num_envs)
+	env, eval_env, env_info = gym_vec_env('GHumanoidGoal_standup-v0', num_envs)
 	print("env = ", env)
 	num_skills = None
 
