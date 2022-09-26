@@ -49,7 +49,7 @@ def check_goalenv(env) -> bool:
 	return True
 
 
-def gym_vec_env_(env_name, num_envs):
+def gym_vec_env_(env_name, num_envs, do_normalize=True):
 	if "num_envs" in inspect.signature(
 		gym.envs.registration.load(
 			gym.envs.registry.spec(env_name).entry_point
@@ -106,16 +106,28 @@ def gym_vec_env_(env_name, num_envs):
 		#         )
 		#     )
 		# )
-		env = NormalizationWrapper(DCILVecWrapper(
-				SyncVectorEnv(
-					[
-						(lambda: gym.make(env_name))
-						if hasattr(dummy_env, "reset_done")
-						else (lambda: ResetDoneWrapper(gym.make(env_name)))
-					]
-					* num_envs,
+		if do_normalize:
+			env = NormalizationWrapper(DCILVecWrapper(
+					SyncVectorEnv(
+						[
+							(lambda: gym.make(env_name))
+							if hasattr(dummy_env, "reset_done")
+							else (lambda: ResetDoneWrapper(gym.make(env_name)))
+						]
+						* num_envs,
+					)
+				))
+		else:
+			env = DCILVecWrapper(
+					SyncVectorEnv(
+						[
+							(lambda: gym.make(env_name))
+							if hasattr(dummy_env, "reset_done")
+							else (lambda: ResetDoneWrapper(gym.make(env_name)))
+						]
+						* num_envs,
+					)
 				)
-			))
 
 		# env = DCILVecWrapper(
 		# 		SyncVectorEnv(
@@ -163,9 +175,9 @@ def gym_vec_env_(env_name, num_envs):
 	return env, env_info
 
 
-def gym_vec_env(env_name, num_envs):
-	env, env_info = gym_vec_env_(env_name, num_envs)
-	eval_env, _ = gym_vec_env_(env_name, 1)
+def gym_vec_env(env_name, num_envs, do_normalize=True):
+	env, env_info = gym_vec_env_(env_name, num_envs, do_normalize=do_normalize)
+	eval_env, _ = gym_vec_env_(env_name, 1, do_normalize=do_normalize)
 	return env, eval_env, env_info
 
 
