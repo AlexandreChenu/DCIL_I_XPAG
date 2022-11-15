@@ -2,8 +2,8 @@
 
 import os
 
-#os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.5"
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.5"
 
 import time
 import jax
@@ -31,6 +31,7 @@ from xpag.tools.timing import timing_reset
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
+import math
 import copy
 
 import gym_gmazes
@@ -42,7 +43,40 @@ from samplers import HER_DCIL
 from goalsetters import DCILGoalSetter
 from agents import SAC_DCIL
 
+import seaborn
+seaborn.set()
+seaborn.set_style("whitegrid")
+
 import pdb
+
+def plot_car(state, ax, alpha, cabcolor="-r", truckcolor="-k"):  # pragma: no cover
+        x = state[0] #self.pose[0]
+        y = state[1] #self.pose[1]
+        yaw = state[2] #self.pose[2]
+
+        length = 0.2  # [m]
+        width = 0.1  # [m]
+        backtowheel = 0.05  # [m]
+        # WHEEL_LEN = 0.03  # [m]
+        # WHEEL_WIDTH = 0.02  # [m]
+        # TREAD = 0.07  # [m]
+        wb = 0.45  # [m]
+
+        outline = np.array([[-backtowheel, (length - backtowheel), (length - backtowheel), -backtowheel, -backtowheel],
+        					[width / 2, width / 2, - width / 2, -width / 2, width / 2]])
+
+        Rot1 = np.array([[math.cos(yaw), math.sin(yaw)],
+        				 [-math.sin(yaw), math.cos(yaw)]])
+
+        outline = (outline.T.dot(Rot1)).T
+
+        outline[0, :] += x
+        outline[1, :] += y
+
+        ax.plot(np.array(outline[0, :]).flatten(),
+        		 np.array(outline[1, :]).flatten(), color=truckcolor, alpha = alpha)
+
+
 
 def plot_traj(trajs, traj_eval, skill_sequence, save_dir, it=0):
 	fig, ax = plt.subplots()
@@ -57,7 +91,7 @@ def plot_traj(trajs, traj_eval, skill_sequence, save_dir, it=0):
 			X = [state[i][0] for state in traj]
 			Y = [state[i][1] for state in traj]
 			Theta = [state[i][2] for state in traj]
-			ax.plot(X,Y, marker=".", c="blue", alpha = 0.7)
+			ax.plot(X,Y, marker=".", c="blue", alpha = 0.4)
 
 			for x, y, t in zip(X,Y,Theta):
 				dx = np.cos(t)
@@ -66,14 +100,17 @@ def plot_traj(trajs, traj_eval, skill_sequence, save_dir, it=0):
 
 	X_eval = [state[0][0] for state in traj_eval]
 	Y_eval = [state[0][1] for state in traj_eval]
-	ax.plot(X_eval, Y_eval, c = "red")
+	ax.plot(X_eval, Y_eval, alpha=0.6, c = "red")
+
+	for state in traj_eval:
+		# print("state = ", state)
+		plot_car(state[0], ax, 0.6, truckcolor="red")
 
 	circles = []
 	for skill in skill_sequence:
-		starting_state, _, _ = skill
-		obs, full_state = starting_state
+		_, _, goal = skill
 		# print("obs = ", obs)
-		circle = plt.Circle((obs[0][0], obs[0][1]), 0.1, color='m', alpha = 0.4)
+		circle = plt.Circle((goal[0][0], goal[0][1]), 0.1, color='m', alpha = 0.4)
 		circles.append(circle)
 		# ax.add_patch(circle)
 	coll = mc.PatchCollection(circles, color="plum", zorder = 4, alpha=0.4)
