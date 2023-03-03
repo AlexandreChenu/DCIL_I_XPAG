@@ -1,6 +1,9 @@
 # DCIL_I_XPAG
 Implementation of the first version of the DCIL algorithm ([paper](https://arxiv.org/abs/2204.07404)) based on jax-based XPAG library. 
 
+> 📘
+> An improved version of the DCIL algorithm (([paper](https://arxiv.org/abs/2211.04786)) is available here: https://github.com/AlexandreChenu/DCIL_XPAG 
+
 # Install 
 
 1. Clone DCIL repo,
