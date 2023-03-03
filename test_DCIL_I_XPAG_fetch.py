@@ -188,12 +188,12 @@ if (__name__=='__main__'):
 	env_args["demo_path"] = str(parsed_args.demo_path)
 
 	num_envs = 1  # the number of rollouts in parallel during training
-	env, eval_env, env_info = gym_vec_env('GFetchGoal-v0', num_envs, do_normalize=False)
+	env, eval_env, env_info = gym_vec_env('GFetchGoal-v0', num_envs, do_normalize=True)
 	print("env = ", env)
 	num_skills = None
 
 
-	s_extractor = skills_extractor_Mj(parsed_args.demo_path, eval_env, eps_state=1.)
+	s_extractor = skills_extractor_Mj(parsed_args.demo_path, eval_env, eps_state=0.5, beta=2.)
 	print("nb_skills (remember to adjust value clipping in sac_from_jaxrl)= ", len(s_extractor.skills_sequence))
 
 	if num_skills == None:
@@ -211,8 +211,8 @@ if (__name__=='__main__'):
 
 	batch_size = 256
 	gd_steps_per_step = 1.5
-	start_training_after_x_steps = env_info['max_episode_steps'] * 50
-	max_steps = 500_000
+	start_training_after_x_steps = 10_000
+	max_steps = 200_000
 	evaluate_every_x_steps = 2_000
 	save_agent_every_x_steps = 50_000
 
@@ -231,16 +231,16 @@ if (__name__=='__main__'):
 	save_episode = True
 	plot_projection = None
 	do_save_video = False
-	do_save_sim_traj = True
+	do_save_sim_traj = False
 
 	params = {
-		"actor_lr": 0.001,
+		"actor_lr": 0.0001,
 		"backup_entropy": False,
 		"value_clipping": True,
-		"critic_lr": 0.001,
+		"critic_lr": 0.0001,
 		"discount": 0.98,
-		# "hidden_dims": (512, 512, 512),
-		"hidden_dims": (400,300),
+		"hidden_dims": (512, 512, 512),
+		#"hidden_dims": (400,300),
 		"init_temperature": 0.0001,
 		"target_entropy": None,
 		"target_update_period": 1,
@@ -308,8 +308,8 @@ if (__name__=='__main__'):
 				print("| overshoot success : ")
 				# print("| num_success_skill = ", np.array(num_success_skill))
 				# print("| num_rollouts_skill = ", np.array(num_rollouts_skill))
-				np.savetxt(save_dir + "/success_skill_" + str(i) + ".txt", num_success_skill)
-				np.savetxt(save_dir + "/rollout_skill_" + str(i) + ".txt", num_rollouts_skill)
+				#np.savetxt(save_dir + "/success_skill_" + str(i) + ".txt", num_success_skill)
+				#np.savetxt(save_dir + "/rollout_skill_" + str(i) + ".txt", num_rollouts_skill)
 				f_ratio.write(str(float(num_success/num_rollouts)) + "\n")
 				num_success = 0
 				num_rollouts = 0
