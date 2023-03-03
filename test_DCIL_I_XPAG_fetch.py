@@ -45,6 +45,8 @@ from agents import SAC_DCIL
 import cv2
 import pickle
 
+import torch
+
 import pdb
 
 def visu_success_zones(eval_env, skill_sequence, ax):
@@ -94,18 +96,25 @@ def plot_traj(eval_env, trajs, traj_eval, skill_sequence, save_dir, it=0):
 
 	visu_success_zones(eval_env, skill_sequence, ax)
 
-	for _azim in range(45, 360, 90):
+	for _azim in range(45, 360, 180):
 		ax.view_init(azim=_azim)
 		plt.savefig(save_dir + "/trajs_azim_" + str(_azim) + "_it_" + str(it) + ".png")
 	# plt.savefig(save_dir + "/trajs_it_"+str(it)+".png")
 	plt.close(fig)
 	return
 
-import torch
-@torch.no_grad()
 
-def eval_traj(env, eval_env, agent, goalsetter):
+def save_sim_traj(sim_traj, path, iteration):
+
+	with open(path + "/sim_traj_" + str(iteration) + ".pickle", 'wb') as handle:
+		pickle.dump(sim_traj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+	return
+
+# @torch.no_grad()
+def eval_traj(env, eval_env, agent, goalsetter, save_sim_traj = False):
 	traj = []
+	sim_traj = [] ## simulation states for video extraction
 	observation = goalsetter.reset(eval_env, eval_env.reset())
 	eval_done = False
 	nb_skills_success = 0
@@ -128,6 +137,11 @@ def eval_traj(env, eval_env, agent, goalsetter):
 				deterministic=True,
 				)
 
+			if save_sim_traj:
+				sim_state = eval_env.envs[0].env.get_inner_state()
+				# print("sim_state = ", sim_state)
+				sim_traj.append(sim_state)
+
 			# print("action = ", action)
 			observation, _, done, info = goalsetter.step(
 				eval_env, observation, action, *eval_env.step(action)
@@ -145,7 +159,7 @@ def eval_traj(env, eval_env, agent, goalsetter):
 		if not next_skill_avail:
 			eval_done = True
 	print("nb skills success = ", nb_skills_success)
-	return traj, nb_skills_success
+	return traj, sim_traj, nb_skills_success
 
 def visu_transitions(eval_env, transitions, it=0):
 	fig, ax = plt.subplots()
@@ -231,7 +245,7 @@ if (__name__=='__main__'):
 	save_episode = True
 	plot_projection = None
 	do_save_video = False
-	do_save_sim_traj = False
+	do_save_sim_traj = True
 
 	params = {
 		"actor_lr": 0.0001,
@@ -292,7 +306,7 @@ if (__name__=='__main__'):
 				print("| do update ? ", env.do_update)
 				print("| RMS = ", env.obs_rms["observation"].mean[0][:10])
 
-			traj_eval, nb_skills_success = eval_traj(env, eval_env, agent, eval_goalsetter)
+			traj_eval, sim_traj_eval, nb_skills_success = eval_traj(env, eval_env, agent, eval_goalsetter, save_sim_traj=True)
 			# print("traj_eval = ", traj_eval)
 			f_nb_skills_success.write(str(nb_skills_success) + "\n")
 			plot_traj(eval_env, trajs, traj_eval, s_extractor.skills_sequence, save_dir, it=i)
@@ -302,10 +316,14 @@ if (__name__=='__main__'):
 			# if info_train is not None:
 			# 	print("rewards = ", max(info_train["rewards"]))
 
+			if do_save_sim_traj:
+				save_sim_traj(sim_traj_eval, save_dir, i)
+
 			if num_rollouts > 0:
 				print("| success ratio (successful skill-rollouts / total rollouts) : ", float(num_success/num_rollouts))
 				print("| skills success : ", [np.array(result).mean() for result in goalsetter.L_skills_results])
 				print("| overshoot success : ")
+				print("| nb of chained skills/goals : ", str(nb_skills_success))
 				# print("| num_success_skill = ", np.array(num_success_skill))
 				# print("| num_rollouts_skill = ", np.array(num_rollouts_skill))
 				#np.savetxt(save_dir + "/success_skill_" + str(i) + ".txt", num_success_skill)
